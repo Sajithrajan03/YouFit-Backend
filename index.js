@@ -13,105 +13,153 @@ import axios from 'axios'
 app.use(cors())
 app.use(bodyParser.urlencoded({extended:true}))
 app.use(bodyParser.json())
+app.get('/auth',(req,res)=>{
+    const oauth2client = new google.auth.OAuth2(
+        // 'client_id',
+        // 'client_secret',
+        // 'redirect_uris'
+        "510019787897-9hfjvuho1cnsf88j150cec2q5l38ghn8.apps.googleusercontent.com",
+        "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",
+        "http://localhost:1234/steps"
+    )
+    
+    const scopes = ["https://www.googleapis.com/auth/fitness.activity.read profile email openid"]
+    const urls = oauth2client.generateAuthUrl({
+        access_type:"offline",
+        scope:scopes,
+        state:JSON.stringify({
+            callbackUrl:req.body.callbackUrl,
+            userID:req.body.userID
+        })  
+        
+    })
+    
+    request(urls,(err,response,body)=>{
+        console.log("error:",err)
+        console.log("statusCode:",response && response.statusCode)
+        res.send(urls)
+    })
+    // res.send(`<script>window.open("${urls}");</script>`);
+})
 
-const oauth2client = new google.auth.OAuth2(
-    // 'client_id',
-    // 'client_secret',
-    // 'redirect_uris'
-    "510019787897-9hfjvuho1cnsf88j150cec2q5l38ghn8.apps.googleusercontent.com",
-    "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",
-    "http://localhost:1234/nutrition"
+
+app.get('/steps',async (req,res)=>{
+    const queryUrl = new urlParse(req.url)
+     const code = queryParse.parse(queryUrl.query).code
+     const oauth2client = new google.auth.OAuth2(
+        // 'client_id',
+        // 'client_secret',
+        // 'redirect_uris'
+        "510019787897-9hfjvuho1cnsf88j150cec2q5l38ghn8.apps.googleusercontent.com",
+        "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",
+        "http://localhost:1234/nutrition"
+    )
+    const token = await oauth2client.getToken(code)
+    
+    
+
+    let stepArray = []
+    try{
+        const result =  await axios({
+            method:"POST",
+            headers:{
+                Authorization:"Bearer "+token.tokens.access_token
+            },
+            "content-Type":"application/json",
+            url:"https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate",
+        data:{
+            "aggregateBy": [{
+                "dataTypeName": "com.google.step_count.delta",
+                "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
+              }],
+              "bucketByTime": { "durationMillis": 86400000 },
+              "startTimeMillis": 1697135400000,
+              "endTimeMillis": 1697653800000 
+        }
+        })
+        
+        stepArray =  result.data.bucket
+        }  
+        catch(error){
+            console.log(error)  
+        }
+
+        try {
+            for (const dataSet of stepArray){
+                
+                for (const point of dataSet.dataset){
+                    for (const steps of point.point){
+                        console.log(steps.value)
+                    }
+                    
+                }
+            }
+        } catch (error) {
+            
+        }
+       
+    }
 )
 
-const stepsScopes = ["https://www.googleapis.com/auth/fitness.activity.read"];
-const nutritionScopes = ["https://www.googleapis.com/auth/fitness.nutrition.read"];
+app.get('/nutrition',async (req,res)=>{
+    const queryUrl = new urlParse(req.url)
+     const code = queryParse.parse(queryUrl.query).code
+     const oauth2client = new google.auth.OAuth2(
+        // 'client_id',
+        // 'client_secret',
+        // 'redirect_uris'
+        "510019787897-9hfjvuho1cnsf88j150cec2q5l38ghn8.apps.googleusercontent.com",
+        "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",
+        "http://localhost:1234/nutrition"
+    )
+    const token = await oauth2client.getToken(code)
+    
+    
 
-const handleOAuth2 = async (req, res , scopes) => {
-    // Generate the authorization URL
-    const authUrl = oauth2client.generateAuthUrl({
-      access_type: "offline", // Request offline access to get a refresh token
-      scope: scopes,
-      
-      
-      
-    });
-    res.redirect(authUrl);
-}
-
-
-app.get('/steps', (req, res) => {
-  handleOAuth2(req, res, stepsScopes);
-});
-
-app.get('/nutrition', (req, res) => {
-  handleOAuth2(req, res, nutritionScopes);
-});
-
-app.get('/auth/callback', async (req, res) => {
-  const code = req.query.code;
-  const { tokens } = await oauth2client.getToken(code);
-  const accessToken = tokens.access_token;
-
-  if (req.query.state.includes('steps')) {
-    try {
-      const result = await axios({
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + accessToken,
-        },
-        'content-Type': 'application/json',
-        url: 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
-        data: {
-          aggregateBy: [
-            {
-              dataTypeName: 'com.google.step_count.delta',
-              dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps',
+    let stepArray = []
+    try{
+        const result =  await axios({
+            method:"POST",
+            headers:{
+                Authorization:"Bearer "+token.tokens.access_token
             },
-          ],
-          bucketByTime: { durationMillis: 86400000 },
-          startTimeMillis: 1697135400000,
-          endTimeMillis: 1697653800000,
-        },
-      });
+            "content-Type":"application/json",
+            url:"https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate",
+        data:{
+            "aggregateBy": [{
+                "dataSourceId":
+                  "raw:com.google.nutrition:407408718192:MyDataSource"
+              }],
+              "bucketByTime": { "durationMillis": 86400000 },
+              "startTimeMillis": 1697135400000,
+              "endTimeMillis": 1697653800000 
+        }
+        })
+        
+        stepArray =  result.data
+        console.log(stepArray)
+        }  
+        catch(error){
+            console.log(error)  
+        }
 
-      const stepArray = result.data.bucket;
-      // Process step count data here
-      res.json(stepArray);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch step data' });
+        try {
+            for (const dataSet of stepArray){
+                
+                // for (const point of dataSet.dataset){
+                //     for (const steps of point.point){
+                //         console.log(steps.value)
+                //     }
+                    
+                // }
+                // console.log(dataSet)
+            }
+        } catch (error) {
+            
+        }
+       
     }
-  } else if (req.query.state.includes('nutrition')) {
-    try {
-      const result = await axios({
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + accessToken,
-        },
-        'content-Type': 'application/json',
-        url: 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
-        data: {
-          aggregateBy: [
-            {
-              dataSourceId: 'raw:com.google.nutrition:407408718192:MyDataSource',
-            },
-          ],
-          bucketByTime: { durationMillis: 86400000 },
-          startTimeMillis: 1697135400000,
-          endTimeMillis: 1697653800000,
-        },
-      });
-
-      const nutritionData = result.data;
-      // Process nutrition data here
-      res.json(nutritionData);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch nutrition data' });
-    }
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}`);
-});
+)
+app.listen(port,()=>{
+    console.log(`Listening at http://localhost:${port}`)
+})
