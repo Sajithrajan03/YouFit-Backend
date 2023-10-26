@@ -56,7 +56,9 @@ app.get('/steps',async (req,res)=>{
     )
     const token = await oauth2client.getToken(code)
     
-    
+    const dateString = "2023-10-5";
+    const s_date = new Date(dateString);
+    const timestamp = s_date.getTime();
 
     let stepArray = []
     try{
@@ -73,8 +75,8 @@ app.get('/steps',async (req,res)=>{
                 "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
               }],
               "bucketByTime": { "durationMillis": 86400000 },
-              "startTimeMillis": 1697135400000,
-              "endTimeMillis": 1697653800000 
+              "startTimeMillis": timestamp,
+              "endTimeMillis": Date.now()
         }
         })
         
@@ -86,7 +88,8 @@ app.get('/steps',async (req,res)=>{
 
         try {
             for (const dataSet of stepArray){
-                
+             
+                console.log(new Date(parseInt(dataSet.startTimeMillis)).toLocaleString())
                 for (const point of dataSet.dataset){
                     for (const steps of point.point){
                         console.log(steps.value[0].intVal)
