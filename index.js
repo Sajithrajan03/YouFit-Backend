@@ -43,7 +43,7 @@ app.get('/',(req,res)=>{
 })
 
 
-app.get('/steps',async (req,res)=>{
+app.get('/stepsing',async (req,res)=>{
     const queryUrl = new urlParse(req.url)
      const code = queryParse.parse(queryUrl.query).code
      const oauth2client = new google.auth.OAuth2(
@@ -104,9 +104,66 @@ app.get('/steps',async (req,res)=>{
     }
 )
 
-app.get('/nutrition',async (req,res)=>{
+app.get('/steps',async (req,res)=>{
 
-    // console.log(queryUrl ,code, oauth2client)
+    const queryUrl = new urlParse(req.url)
+    const code = queryParse.parse(queryUrl.query).code
+    const oauth2client = new google.auth.OAuth2(
+       // 'client_id',
+       // 'client_secret',
+       // 'redirect_uris'
+       "510019787897-9hfjvuho1cnsf88j150cec2q5l38ghn8.apps.googleusercontent.com",
+       "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",
+       "http://localhost:1234/steps"
+   )
+   const token = await oauth2client.getToken(code)
+   
+   const dateString = "2023-10-5";
+   const s_date = new Date(dateString);
+   const timestamp = s_date.getTime();
+
+   let stepArray = []
+   try{
+       const result =  await axios({
+           method:"POST",
+           headers:{
+               Authorization:"Bearer "+token.tokens.access_token
+           },
+           "content-Type":"application/json",
+           url:"https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate",
+       data:{
+           "aggregateBy": [{
+               "dataTypeName": "com.google.heart_minutes",
+               "dataSourceId": "derived:com.google.heart_minutes:com.google.android.gms:merge_heart_minutes"
+             }],
+             "bucketByTime": { "durationMillis": 86400000 },
+             "startTimeMillis": timestamp,
+             "endTimeMillis": Date.now()
+       }
+       })
+       
+       stepArray =  result.data.bucket
+       }  
+       catch(error){
+           console.log(error)  
+       }
+
+       try {
+           for (const dataSet of stepArray){
+            
+               console.log(new Date(parseInt(dataSet.startTimeMillis)).toLocaleString())
+               for (const point of dataSet.dataset){
+                   for (const steps of point.point){
+                       console.log(steps)
+                   }
+                   
+               }
+            
+           }
+       } catch (error) {
+           
+       }
+      
 
 })
 app.listen(port,()=>{
